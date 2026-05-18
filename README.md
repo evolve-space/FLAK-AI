@@ -23,7 +23,9 @@ partido_final/
 ├── disparos/
 │   └── disparo_00_44_55.mp4
 └── saques/
-    └── saque_banda_00_12_01.mp4
+│   └── saque_banda_00_12_01.mp4
+└── porteria/
+    └── saque_porteria_00_12_01.mp4
 ```
 
 ---
@@ -57,7 +59,7 @@ Sin pasos intermedios. Sin revisión manual. Sin configuración.
 | Saque de puerta | `saques_puerta/` |
 | Disparo a puerta | `disparos/` |
 
-Cada clip tiene una duración de ±5 segundos alrededor del momento exacto del evento.
+Cada clip tiene una duración de ±30 segundos alrededor del momento exacto del evento.
 
 ---
 
