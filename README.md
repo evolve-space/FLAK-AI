@@ -6,7 +6,7 @@
 
 ## ¿Qué es FlakAI?
 
-FlakAI v2 es una plataforma web completa que automatiza la extracción y etiquetado de eventos en grabaciones de partidos de fútbol. Sube un vídeo, la IA detecta automáticamente eventos relevantes (goles, córners, faltas, etc.), extrae clips centrados en cada evento y los distribuye a equipos humanos para su revisión. Los datos validados sirven como dataset de entrenamiento para modelos de visión por computador.
+FlakAI v2 es una plataforma web completa que automatiza la extracción y etiquetado de eventos en grabaciones de partidos de fútbol. Sube un vídeo, la IA detecta automáticamente eventos relevantes (goles, córners, faltas, tiros a puerta y saques de banda.), extrae clips centrados en cada evento y los distribuye a equipos humanos para su revisión. Los datos validados sirven como dataset de entrenamiento para modelos de visión por computador.
 
 ---
 
