@@ -1,6 +1,6 @@
 # FlakAI v2
 
-> Herramienta automática de análisis de partidos de fútbol con IA. Sube el vídeo, recibe los clips clasificados.
+> Herramienta automática de análisis de partidos de fútbol con IA. Sube el vídeo, recibe los clips clasificados.(Proyecto actualmente desarrollandose situado en un 60% de su desarrollo final).
 
 ---
 
