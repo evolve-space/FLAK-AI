@@ -208,9 +208,9 @@ npm run dev
 | `JWT_SECRET` | Clave secreta JWT | *(cambiar en producción)* |
 | `FFMPEG_PATH` | Ruta al binario ffmpeg | busca en PATH |
 | `DETECTOR_BACKEND` | Motor de detección: `mock` o `torch` | `mock` |
-| `CLIP_WINDOW_SECONDS` | Duración total del clip (seg) | `10.0` |
+| `CLIP_WINDOW_SECONDS` | Duración total del clip (seg) | `30.0` |
 | `TORCH_DETECTION_STRIDE` | Stride de detección en segundos | `5.0` |
-| `TORCH_DETECTION_THRESHOLD` | Confianza mínima para emitir evento (%) | `40.0` |
+| `TORCH_DETECTION_THRESHOLD` | Confianza mínima para emitir evento (%) | `70.0` |
 | `TORCH_NMS_WINDOW` | Ventana NMS: suprime eventos duplicados (seg) | `20.0` |
 | `STRIPE_SECRET_KEY` | Clave privada de Stripe | — |
 | `CORS_ORIGINS` | Orígenes adicionales separados por comas | — |
