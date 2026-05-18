@@ -1,25 +1,75 @@
 # FlakAI v2
 
-> Plataforma de anotación de vídeo con inteligencia artificial para análisis de partidos de fútbol. (Proyecto actualmente desarrollandose situado en un 60% de su desarrollo final).
+> Herramienta automática de análisis de partidos de fútbol con IA. Sube el vídeo, recibe los clips clasificados.
 
 ---
 
-## ¿Qué es FlakAI?
+## ¿Qué hace FlakAI?
 
-FlakAI v2 es una plataforma web completa que automatiza la extracción y etiquetado de eventos en grabaciones de partidos de fútbol. Sube un vídeo, la IA detecta automáticamente eventos relevantes (goles, córners, faltas, tiros a puerta y saques de banda.), extrae clips centrados en cada evento y los distribuye a equipos humanos para su revisión. Los datos validados sirven como dataset de entrenamiento para modelos de visión por computador.
+FlakAI v2 analiza grabaciones de partidos de fútbol de forma completamente automática. El usuario sube el vídeo y la herramienta se encarga del resto: detecta todos los eventos relevantes del partido, extrae un clip por cada uno y los entrega organizados en carpetas por tipo de evento. Sin intervención manual. Sin configuración adicional.
+
+**Resultado final:** una carpeta estructurada con todos los clips del partido, listos para usar.
+
+```
+partido_final/
+├── goles/
+│   ├── gol_00_23_14.mp4
+│   └── gol_00_67_42.mp4
+├── corners/
+│   ├── corner_00_08_33.mp4
+│   └── corner_00_51_07.mp4
+├── faltas/
+│   └── falta_00_34_19.mp4
+├── disparos/
+│   └── disparo_00_44_55.mp4
+└── saques/
+    └── saque_banda_00_12_01.mp4
+```
 
 ---
 
-## Características principales
+## Flujo de uso
 
-- **Detección automática de eventos** — Worker de IA en segundo plano analiza cada vídeo y detecta: goles, córners, saques de banda, faltas, saques de puerta y disparos a puerta.
-- **Extracción de clips con FFmpeg** — Genera clips de ±5 segundos alrededor de cada evento, con extracción paralela (hasta 4 clips simultáneos por vídeo).
-- **Lotes de etiquetado** — Los clips se distribuyen automáticamente en lotes (batches) entre revisores mediante round-robin.
-- **Revisión en tiempo real** — Interfaz web para aprobar o rechazar clips con teclado (`A` / `R` / `←` / `→`).
-- **Multi-tenant con roles** — Cada equipo gestiona sus propios vídeos y revisores. Aprobación de nuevos equipos por administrador.
-- **Facturación con Stripe** — Planes `free_trial`, `pro` y `club` con límites de subida. Portal de cliente integrado.
-- **Exportación de datasets** — Exporta clips revisados en formato JSONL/CSV listos para entrenar modelos.
-- **Auto-ingesta por carpeta** — Watcher en segundo plano que detecta nuevos vídeos en una carpeta local y los ingesta automáticamente.
+```
+1. Sube el vídeo del partido
+        ↓
+2. La IA analiza el vídeo automáticamente
+        ↓
+3. FFmpeg extrae un clip por cada evento detectado
+        ↓
+4. Los clips se clasifican por tipo de evento
+        ↓
+5. Descarga la carpeta organizada con todos los clips
+```
+
+Sin pasos intermedios. Sin revisión manual. Sin configuración.
+
+---
+
+## Eventos detectados
+
+| Evento | Carpeta de salida |
+|--------|------------------|
+| Gol | `goles/` |
+| Córner | `corners/` |
+| Saque de banda | `saques_banda/` |
+| Falta | `faltas/` |
+| Saque de puerta | `saques_puerta/` |
+| Disparo a puerta | `disparos/` |
+
+Cada clip tiene una duración de ±5 segundos alrededor del momento exacto del evento.
+
+---
+
+## Características técnicas
+
+- **Detección automática** — Motor de IA analiza el vídeo completo y localiza cada evento con su timestamp y nivel de confianza.
+- **Extracción paralela con FFmpeg** — Hasta 4 clips extraídos simultáneamente por vídeo. Stream-copy para máxima velocidad sin recodificación.
+- **Clasificación automática** — Cada clip se clasifica y organiza en su carpeta correspondiente sin intervención humana.
+- **Procesado en segundo plano** — El usuario sube el vídeo y puede cerrar el navegador. El sistema procesa en background y notifica cuando termina.
+- **Multi-equipo** — Varios equipos o usuarios pueden usar la plataforma de forma independiente con sus propios vídeos y resultados.
+- **Facturación integrada** — Planes de acceso con Stripe. Portal de cliente para gestionar suscripciones.
+- **Auto-ingesta por carpeta** — Modo servidor: detecta nuevos vídeos en una carpeta local y los procesa automáticamente sin interfaz web.
 
 ---
 
@@ -28,10 +78,10 @@ FlakAI v2 es una plataforma web completa que automatiza la extracción y etiquet
 | Capa | Tecnología |
 |------|-----------|
 | Backend | Python 3.11+, FastAPI, SQLAlchemy, SQLite |
-| Frontend | Next.js 14+, TypeScript, Tailwind CSS, Shadcn/UI |
+| Frontend | Next.js 14+, TypeScript, Tailwind CSS |
 | Procesado de vídeo | FFmpeg (stream-copy + extracción paralela) |
+| Motor de IA | PyTorch / ONNX (detector de eventos) |
 | Autenticación | JWT (Bearer token) |
-| Rate limiting | SlowAPI |
 | Facturación | Stripe (Checkout + Webhooks + Portal) |
 
 ---
@@ -39,47 +89,36 @@ FlakAI v2 es una plataforma web completa que automatiza la extracción y etiquet
 ## Arquitectura
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Frontend (Next.js)                 │
-│   Login → Dashboard → Subida → Revisión de clips    │
-└────────────────────────┬────────────────────────────┘
-                         │ REST API
-┌────────────────────────▼────────────────────────────┐
-│                  Backend (FastAPI)                   │
-│                                                      │
-│  /api/videos   /api/clips    /api/batches            │
-│  /api/admin    /api/billing  /api/auth               │
-│                                                      │
-│  ┌──────────────────────────────────────────────┐   │
-│  │             AI Worker (asyncio)              │   │
-│  │  Vídeo → Detector → Eventos → FFmpeg → Clips │   │
-│  └──────────────────────────────────────────────┘   │
-│                                                      │
-│  SQLite (MVP) / PostgreSQL (producción)              │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│              Frontend (Next.js)              │
+│   Subida de vídeo → Progreso → Descarga     │
+└──────────────────┬──────────────────────────┘
+                   │ REST API
+┌──────────────────▼──────────────────────────┐
+│              Backend (FastAPI)               │
+│                                             │
+│  ┌─────────────────────────────────────┐   │
+│  │          AI Worker (asyncio)        │   │
+│  │                                     │   │
+│  │  Vídeo → Detector IA → Timestamps   │   │
+│  │       → FFmpeg → Clips              │   │
+│  │       → Clasificación por evento    │   │
+│  │       → Carpeta de salida lista     │   │
+│  └─────────────────────────────────────┘   │
+│                                             │
+│  SQLite / PostgreSQL                        │
+└─────────────────────────────────────────────┘
 ```
-
-**Flujo de datos:**
-1. Usuario sube vídeo → se guarda en `backend/uploads/`
-2. Worker de IA procesa el vídeo en segundo plano (semáforo: máx. 3 vídeos simultáneos)
-3. El detector genera eventos con timestamp y nivel de confianza
-4. FFmpeg extrae clips centrados en cada evento → `backend/clips/`
-5. Los clips se asignan automáticamente a lotes de revisión
-6. Revisores aprueban o rechazan cada clip en el dashboard
-7. Clips aprobados exportables como dataset de entrenamiento
-
----
-
-## Requisitos previos
-
-- Python 3.11+
-- Node.js 18+
-- [FFmpeg](https://ffmpeg.org/download.html) instalado en el sistema (o ruta configurada en `.env`)
-- (Opcional) Stripe CLI para pruebas de webhooks locales
 
 ---
 
 ## Instalación
+
+### Requisitos
+
+- Python 3.11+
+- Node.js 18+
+- [FFmpeg](https://ffmpeg.org/download.html) instalado en el sistema
 
 ### 1. Clonar el repositorio
 
@@ -92,19 +131,17 @@ cd flak-ai-v2
 
 ```bash
 cd backend
-
-# Crear entorno virtual
 python -m venv venv
 
-# Activar (Windows)
+# Windows
 venv\Scripts\activate
-# Activar (Linux/Mac)
+# Linux/Mac
 source venv/bin/activate
 
 pip install -r requirements.txt
 ```
 
-Crea el archivo `backend/.env`:
+Crea `backend/.env`:
 
 ```env
 DATABASE_URL=sqlite:///./flak_ai.db
@@ -114,13 +151,13 @@ JWT_SECRET=cambia-esto-en-produccion
 FFMPEG_PATH=
 FFPROBE_PATH=
 
-# Detector: "mock" para desarrollo, "torch" para modelo real
-DETECTOR_BACKEND=mock
+# Motor de detección
+DETECTOR_BACKEND=torch
 
-# Clip: ventana en segundos centrada en el evento
+# Duración del clip centrado en el evento (segundos)
 CLIP_WINDOW_SECONDS=10.0
 
-# Stripe (opcional — solo si usas facturación)
+# Stripe (opcional)
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_ID_PRO=price_...
@@ -128,13 +165,8 @@ STRIPE_PRICE_ID_CLUB=price_...
 APP_URL=http://localhost:3000
 ```
 
-Iniciar el backend:
-
 ```bash
-# Crear usuario administrador (admin / admin)
-python seed_admin.py
-
-# Lanzar servidor
+python seed_admin.py   # Crea usuario administrador (admin / admin)
 uvicorn main:app --reload
 # → http://localhost:8000
 # → Docs: http://localhost:8000/docs
@@ -158,7 +190,7 @@ npm run dev
 # → http://localhost:3000
 ```
 
-### Inicio rápido (Windows, todo de una vez)
+### Inicio rápido (Windows)
 
 ```powershell
 .\start.ps1
@@ -166,64 +198,44 @@ npm run dev
 
 ---
 
-## Variables de entorno (referencia completa)
+## Variables de entorno
 
 | Variable | Descripción | Por defecto |
 |----------|-------------|-------------|
 | `DATABASE_URL` | URL de base de datos | `sqlite:///./flak_ai.db` |
-| `JWT_SECRET` | Clave secreta para tokens JWT | *(cambiar en producción)* |
+| `JWT_SECRET` | Clave secreta JWT | *(cambiar en producción)* |
 | `FFMPEG_PATH` | Ruta al binario ffmpeg | busca en PATH |
 | `DETECTOR_BACKEND` | Motor de detección: `mock` o `torch` | `mock` |
 | `CLIP_WINDOW_SECONDS` | Duración total del clip (seg) | `10.0` |
-| `AUTO_APPROVE_CONFIDENCE` | Confianza mínima para aprobación automática (%) | `101.0` (todo a revisión) |
 | `TORCH_DETECTION_STRIDE` | Stride de detección en segundos | `5.0` |
 | `TORCH_DETECTION_THRESHOLD` | Confianza mínima para emitir evento (%) | `40.0` |
+| `TORCH_NMS_WINDOW` | Ventana NMS: suprime eventos duplicados (seg) | `20.0` |
 | `STRIPE_SECRET_KEY` | Clave privada de Stripe | — |
 | `CORS_ORIGINS` | Orígenes adicionales separados por comas | — |
 
 ---
 
-## Tipos de eventos detectados
-
-| Evento | Código |
-|--------|--------|
-| Gol | `goal` |
-| Córner | `corner` |
-| Saque de banda | `throw_in` |
-| Falta | `foul` |
-| Saque de puerta | `goal_kick` |
-| Disparo a puerta | `shot_on_target` |
-
----
-
 ## API REST
 
-Documentación interactiva disponible en `http://localhost:8000/docs` (Swagger UI).
+Documentación interactiva en `http://localhost:8000/docs`.
 
 ```
-POST   /api/auth/register            Registro de usuario
-POST   /api/auth/token               Login → JWT
+POST   /api/auth/register       Registro de usuario
+POST   /api/auth/token          Login → JWT
 
-GET    /api/videos/                  Listar vídeos del equipo
-POST   /api/videos/upload            Subir vídeo (chunked)
-DELETE /api/videos/{id}              Eliminar vídeo
+GET    /api/videos/             Listar vídeos
+POST   /api/videos/upload       Subir vídeo (procesado automático)
+GET    /api/videos/{id}/status  Estado del procesado y progreso
+DELETE /api/videos/{id}         Eliminar vídeo
 
-GET    /api/clips/                   Listar clips pendientes de revisión
-PATCH  /api/clips/{id}/review        Aprobar o rechazar clip
+GET    /api/clips/              Listar clips generados
+GET    /api/clips/{id}/download Descargar clip individual
 
-GET    /api/batches/                 Listar lotes del equipo
-POST   /api/batches/                 Crear nuevo lote
-PATCH  /api/batches/{id}/complete    Marcar lote como completado
+GET    /api/billing/plans       Planes disponibles
+POST   /api/billing/checkout    Crear sesión de pago Stripe
+POST   /api/billing/portal      Portal de gestión de suscripción
 
-GET    /api/billing/plans            Planes y suscripción actual
-POST   /api/billing/checkout         Crear sesión de pago Stripe
-POST   /api/billing/portal           Portal de gestión de suscripción
-
-GET    /api/admin/teams              Listar todos los equipos (admin)
-PATCH  /api/admin/teams/{id}/approve Aprobar equipo (admin)
-GET    /api/admin/export/reviewed    Exportar dataset global (admin)
-
-GET    /api/export/reviewed          Exportar dataset del equipo (JSONL/CSV)
+GET    /api/admin/teams         Panel de administración
 ```
 
 ---
@@ -232,17 +244,9 @@ GET    /api/export/reviewed          Exportar dataset del equipo (JSONL/CSV)
 
 | Plan | Límite | Descripción |
 |------|--------|-------------|
-| `free_trial` | 1 vídeo | Prueba gratuita para nuevos equipos |
+| `free_trial` | 1 vídeo | Prueba gratuita |
 | `pro` | Ilimitado | Plan profesional |
-| `club` | Ilimitado | Plan club con funciones avanzadas |
-
----
-
-## Modelo de acceso y equipos
-
-- Cada equipo nuevo queda en estado **pendiente de aprobación** hasta que un admin lo aprueba en el panel de administración.
-- El admin puede rechazar equipos; el nombre se libera para futuros registros.
-- Credenciales del admin inicial (generadas con `seed_admin.py`): **admin** / **admin** — cambiar en producción.
+| `club` | Ilimitado | Plan club |
 
 ---
 
@@ -252,32 +256,24 @@ GET    /api/export/reviewed          Exportar dataset del equipo (JSONL/CSV)
 flak-ai-v2/
 ├── backend/
 │   ├── main.py                  # App FastAPI + middlewares
-│   ├── ai_worker.py             # Worker de procesado en background
+│   ├── ai_worker.py             # Worker automático de procesado
 │   ├── clip_generation.py       # Extracción de clips con FFmpeg
-│   ├── models.py                # Modelos SQLAlchemy (ORM)
-│   ├── schemas.py               # Esquemas Pydantic (validación)
+│   ├── models.py                # Modelos SQLAlchemy
+│   ├── schemas.py               # Esquemas Pydantic
 │   ├── config.py                # Configuración 12-factor (.env)
-│   ├── auth.py                  # JWT + dependencias de autenticación
-│   ├── auto_ingest_watcher.py   # Watcher de carpeta local
-│   ├── detection/               # Capa de detección (mock / torch / onnx)
-│   ├── billing/                 # Lógica de suscripción y tiers
-│   └── routers/
-│       ├── auth.py              # Registro y login
-│       ├── videos.py            # CRUD vídeos + subida chunked
-│       ├── clips.py             # Revisión de clips
-│       ├── batches.py           # Gestión de lotes
-│       ├── billing.py           # Stripe checkout + webhooks
-│       ├── admin.py             # Panel administrador
-│       ├── export_reviewed.py   # Exportación de datasets
-│       └── ml_admin.py          # Métricas ML para admin
+│   ├── auth.py                  # JWT + autenticación
+│   ├── auto_ingest_watcher.py   # Auto-ingesta por carpeta local
+│   ├── detection/               # Motor de detección IA (torch/onnx/mock)
+│   ├── billing/                 # Suscripciones y tiers
+│   └── routers/                 # Endpoints REST
 ├── frontend/
 │   ├── app/
-│   │   ├── dashboard/           # Dashboard principal (vídeos, clips, lotes)
-│   │   └── login/               # Página de autenticación
-│   ├── components/              # Componentes reutilizables
-│   └── lib/                     # Utilidades y cliente API
-├── datasets/                    # Manifiestos de dataset exportados
-└── start.ps1                    # Script de inicio rápido (Windows)
+│   │   ├── dashboard/           # Dashboard: subida, progreso, descarga
+│   │   └── login/               # Autenticación
+│   ├── components/              # Componentes UI
+│   └── lib/                     # Cliente API y utilidades
+├── datasets/                    # Manifiestos exportados
+└── start.ps1                    # Inicio rápido Windows
 ```
 
 ---
