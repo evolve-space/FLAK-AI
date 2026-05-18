@@ -1,6 +1,6 @@
 # FlakAI v2
 
-> Plataforma de anotación de vídeo con inteligencia artificial para análisis de partidos de fútbol.
+> Plataforma de anotación de vídeo con inteligencia artificial para análisis de partidos de fútbol. (Proyecto actualmente desarrollandose situado en un 60% de su desarrollo final).
 
 ---
 
